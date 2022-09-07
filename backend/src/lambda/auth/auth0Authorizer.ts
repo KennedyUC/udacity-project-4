@@ -57,7 +57,7 @@ export const handler = async (
 async function verifyToken(authHeader: string): Promise<JwtPayload> {
     const token = getToken(authHeader)
     const jwt: Jwt = decode(token, {complete: true}) as Jwt
-    const kid = jwt.header.kid;
+    const key_id = jwt.header.key_id;
     let cert;
 
     // TODO: Implement token verification
@@ -65,24 +65,24 @@ async function verifyToken(authHeader: string): Promise<JwtPayload> {
     // You can read more about how to do this here: https://auth0.com/blog/navigating-rs256-and-jwks/
     try {
         const jwks = await Axios.get(jwksUrl);
-        const signingKey = jwks.data.keys.find(i => i.kid === kid);
+        const signingKey = jwks.data.keys.find(i => i.key_id === key_id);
 
         if (!signingKey) {
-            throw new Error(`No signing key matching the kid '${kid}' was found`);
+            throw new Error(`No signing key matching the ID '${key_id}'`);
         }
 
         cert = `-----BEGIN CERTIFICATE-----\n${signingKey.x5c[0]}\n-----END CERTIFICATE-----`;
     } catch (e) {
-        logger.error("Failed to retrieve auth0 certificate", {error: e.message});
+        logger.error("Failed to retrieve certificate", {error: e.message});
     }
     return verify(token, cert, {algorithms: ["RS256"]}) as JwtPayload;
 }
 
 function getToken(authHeader: string): string {
-    if (!authHeader) throw new Error('No authentication header')
+    if (!authHeader) throw new Error('No auth header')
 
     if (!authHeader.toLowerCase().startsWith('bearer '))
-        throw new Error('Invalid authentication header')
+        throw new Error('Invalid auth header')
 
     const split = authHeader.split(' ')
     const token = split[1]
